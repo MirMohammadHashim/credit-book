@@ -292,3 +292,19 @@ def summary():
     return jsonify(
         [{"id": r[0], "name": r[1], "phone": r[2], "balance": str(r[3])} for r in rows]
     )
+
+
+# ---------- Serve the website pages ----------
+from flask import send_from_directory
+
+FRONTEND_DIR = "/app/frontend"
+
+
+@app.route("/")
+def home():
+    return send_from_directory(FRONTEND_DIR, "index.html")
+
+
+@app.route("/<path:name>")
+def site_files(name):
+    return send_from_directory(FRONTEND_DIR, name)

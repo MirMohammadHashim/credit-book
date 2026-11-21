@@ -137,5 +137,43 @@ def me():
     return jsonify({"user_id": g.user_id})
 
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+@app.route("/api/customers", methods=["POST"])
+@login_required
+def add_customer():
+    data = request.get_json(silent=True) or {}
+    name = str(data.get("name", "")).strip()
+    phone = str(data.get("phone", "")).strip()
+
+    if not name or len(name) > 100:
+        return jsonify({"error": "Name is required (up to 100 characters)"}), 400
+    if len(phone) > 20:
+        return jsonify({"error": "Phone is too long"}), 400
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO customers (user_id, name, phone) VALUES (%s, %s, %s)",
+                (g.user_id, name, phone or None),
+            )
+            new_id = cur.lastrowid
+        conn.commit()
+    finally:
+        conn.close()
+    return jsonify({"id": new_id, "name": name}), 201
+
+
+@app.route("/api/customers", methods=["GET"])
+@login_required
+def list_customers():
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, name, phone FROM customers WHERE user_id = %s ORDER BY name",
+                (g.user_id,),
+            )
+            rows = cur.fetchall()
+    finally:
+        conn.close()
+    return jsonify([{"id": r[0], "name": r[1], "phone": r[2]} for r in rows])

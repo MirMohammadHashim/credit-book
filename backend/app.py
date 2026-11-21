@@ -177,3 +177,118 @@ def list_customers():
     finally:
         conn.close()
     return jsonify([{"id": r[0], "name": r[1], "phone": r[2]} for r in rows])
+
+
+from datetime import date
+from decimal import Decimal, InvalidOperation
+
+
+def owns_customer(cur, customer_id):
+    cur.execute(
+        "SELECT id FROM customers WHERE id = %s AND user_id = %s",
+        (customer_id, g.user_id),
+    )
+    return cur.fetchone() is not None
+
+
+@app.route("/api/customers/<int:customer_id>/entries", methods=["POST"])
+@login_required
+def add_entry(customer_id):
+    data = request.get_json(silent=True) or {}
+    entry_type = str(data.get("type", ""))
+    note = str(data.get("note", "")).strip()
+
+    try:
+        amount = Decimal(str(data.get("amount", "")))
+    except InvalidOperation:
+        return jsonify({"error": "Amount must be a number"}), 400
+    if (
+        not amount.is_finite()
+        or amount <= 0
+        or amount > Decimal("99999999.99")
+        or amount.as_tuple().exponent < -2
+    ):
+        return jsonify({"error": "Amount must be positive, up to 2 decimals"}), 400
+    if entry_type not in ("credit", "payment"):
+        return jsonify({"error": "Type must be credit or payment"}), 400
+    if len(note) > 255:
+        return jsonify({"error": "Note is too long"}), 400
+    try:
+        entry_date = date.fromisoformat(
+            str(data.get("entry_date") or date.today().isoformat())
+        )
+    except ValueError:
+        return jsonify({"error": "Date must look like 2026-11-22"}), 400
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            if not owns_customer(cur, customer_id):
+                return jsonify({"error": "Customer not found"}), 404
+            cur.execute(
+                "INSERT INTO entries (customer_id, amount, type, note, entry_date) "
+                "VALUES (%s, %s, %s, %s, %s)",
+                (customer_id, amount, entry_type, note or None, entry_date),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+    return jsonify({"message": "Entry added"}), 201
+
+
+@app.route("/api/customers/<int:customer_id>/entries", methods=["GET"])
+@login_required
+def list_entries(customer_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            if not owns_customer(cur, customer_id):
+                return jsonify({"error": "Customer not found"}), 404
+            cur.execute(
+                "SELECT id, amount, type, note, entry_date FROM entries "
+                "WHERE customer_id = %s ORDER BY entry_date DESC, id DESC",
+                (customer_id,),
+            )
+            rows = cur.fetchall()
+            cur.execute(
+                "SELECT COALESCE(SUM(CASE WHEN type = 'credit' THEN amount "
+                "ELSE -amount END), 0) FROM entries WHERE customer_id = %s",
+                (customer_id,),
+            )
+            balance = cur.fetchone()[0]
+    finally:
+        conn.close()
+    entries = [
+        {
+            "id": r[0],
+            "amount": str(r[1]),
+            "type": r[2],
+            "note": r[3],
+            "entry_date": r[4].isoformat(),
+        }
+        for r in rows
+    ]
+    return jsonify({"balance": str(balance), "entries": entries})
+
+
+@app.route("/api/summary")
+@login_required
+def summary():
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT c.id, c.name, c.phone, "
+                "COALESCE(SUM(CASE WHEN e.type = 'credit' THEN e.amount "
+                "ELSE -e.amount END), 0) AS balance "
+                "FROM customers c LEFT JOIN entries e ON e.customer_id = c.id "
+                "WHERE c.user_id = %s "
+                "GROUP BY c.id, c.name, c.phone ORDER BY balance DESC",
+                (g.user_id,),
+            )
+            rows = cur.fetchall()
+    finally:
+        conn.close()
+    return jsonify(
+        [{"id": r[0], "name": r[1], "phone": r[2], "balance": str(r[3])} for r in rows]
+    )

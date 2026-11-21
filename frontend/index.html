@@ -4,93 +4,82 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Credit Book</title>
-  <style>
-    body { font-family: system-ui, sans-serif; background: #f4f6f8; margin: 0; }
-    .card { max-width: 360px; margin: 60px auto; background: #fff; padding: 24px;
-            border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
-    h1 { margin-top: 0; }
-    input { width: 100%; padding: 10px; margin: 6px 0 14px; box-sizing: border-box;
-            border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
-    button { padding: 10px 16px; border: 0; border-radius: 6px; font-size: 16px;
-             cursor: pointer; margin-right: 8px; }
-    .primary { background: #2563eb; color: #fff; }
-    .secondary { background: #e5e7eb; }
-    #msg { margin-top: 14px; color: #b91c1c; }
-    .hidden { display: none; }
-  </style>
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <div class="card">
-    <h1>Credit Book</h1>
+  <header class="bar">
+    <span class="brand">Credit Book</span>
+    <span id="who" class="who hidden">
+      <span id="who-email"></span>
+      <button id="logout" class="btn small secondary">Log out</button>
+    </span>
+  </header>
 
-    <div id="login-box">
-      <label>Email</label>
+  <main class="card">
+
+    <!-- Login / Sign up -->
+    <section id="view-login" class="hidden">
+      <h2>Welcome</h2>
+      <p class="muted">Keep track of what your customers owe you.</p>
+      <label for="email">Email</label>
       <input id="email" type="email" autocomplete="username">
-      <label>Password</label>
+      <label for="password">Password (8 to 72 characters)</label>
       <input id="password" type="password" autocomplete="current-password">
-      <button class="primary" onclick="send('/api/login')">Log in</button>
-      <button class="secondary" onclick="send('/api/signup')">Sign up</button>
-    </div>
+      <div class="actions">
+        <button id="btn-login" class="btn primary">Log in</button>
+        <button id="btn-signup" class="btn secondary">Sign up</button>
+      </div>
+    </section>
 
-    <div id="home-box" class="hidden">
-      <p id="welcome"></p>
-      <button class="secondary" onclick="logout()">Log out</button>
-    </div>
+    <!-- Customer list -->
+    <section id="view-list" class="hidden">
+      <div class="summary">
+        <div class="muted">Total to collect</div>
+        <div id="total" class="big">0.00</div>
+      </div>
 
-    <div id="msg"></div>
-  </div>
+      <h2>Your customers</h2>
+      <div id="list"></div>
 
-  <script>
-    const msg = document.getElementById("msg");
+      <h3>Add customer</h3>
+      <label for="cname">Name</label>
+      <input id="cname" maxlength="100">
+      <label for="cphone">Phone (optional)</label>
+      <input id="cphone" maxlength="20" inputmode="tel">
+      <button id="btn-add-customer" class="btn primary">Add customer</button>
+    </section>
 
-    async function send(path) {
-      msg.textContent = "";
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value;
-      try {
-        const res = await fetch(path, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: email, password: password })
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          msg.textContent = data.error || "Something went wrong";
-          return;
-        }
-        if (path === "/api/login") {
-          localStorage.setItem("token", data.token);
-          showHome();
-        } else {
-          msg.textContent = "Account created. Now click Log in.";
-        }
-      } catch (e) {
-        msg.textContent = "Cannot reach the server.";
-      }
-    }
+    <!-- One customer -->
+    <section id="view-customer" class="hidden">
+      <a href="#/" class="back">&larr; All customers</a>
+      <h2 id="c-name"></h2>
+      <div id="c-phone" class="muted"></div>
+      <div class="summary">
+        <div class="muted" id="c-balance-label">Balance</div>
+        <div id="c-balance" class="big">0.00</div>
+      </div>
 
-    async function showHome() {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-      const res = await fetch("/api/me", {
-        headers: { "Authorization": "Bearer " + token }
-      });
-      if (!res.ok) { logout(); return; }
-      const data = await res.json();
-      document.getElementById("welcome").textContent =
-        "Logged in as " + (data.email || "you");
-      document.getElementById("login-box").classList.add("hidden");
-      document.getElementById("home-box").classList.remove("hidden");
-      msg.textContent = "";
-    }
+      <h3>Add entry</h3>
+      <label for="etype">What happened?</label>
+      <select id="etype">
+        <option value="credit">Gave goods on credit (udhaar)</option>
+        <option value="payment">Received a payment</option>
+      </select>
+      <label for="eamount">Amount</label>
+      <input id="eamount" inputmode="decimal" placeholder="e.g. 250.50">
+      <label for="enote">Note (optional)</label>
+      <input id="enote" maxlength="255">
+      <label for="edate">Date</label>
+      <input id="edate" type="date">
+      <button id="btn-add-entry" class="btn primary">Save entry</button>
 
-    function logout() {
-      localStorage.removeItem("token");
-      document.getElementById("home-box").classList.add("hidden");
-      document.getElementById("login-box").classList.remove("hidden");
-    }
+      <h3>History</h3>
+      <div id="entries"></div>
+    </section>
 
-    showHome();
-  </script>
+    <div id="msg" class="msg" role="alert"></div>
+  </main>
+
+  <script src="/app.js"></script>
 </body>
 </html>

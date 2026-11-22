@@ -23,7 +23,7 @@ A digital <i>udhaar khata</i> for shopkeepers, used here to practise real cloud 
 - **No SSH, no stored secrets.** Server access is through Session Manager. Passwords and signing keys live in Parameter Store and are read through a least-privilege IAM role.
 - **Secure by design.** bcrypt password hashing, JWT login, parameterised SQL, input validation, and an ownership check on every request, so one shop can never see another shop's data.
 - **Observable.** Container logs stream to CloudWatch, and an alarm emails me through SNS if the server fails its status check.
-- **Cost-aware.** No NAT Gateway or load balancer, 7-day log retention, and a documented teardown. Roughly **$0.035 per hour** while running.
+- **Cost-aware.** No NAT Gateway, no always-on load balancer, 7-day log retention, and a documented teardown. Roughly **$0.035 per hour** while running.
 - **Honest documentation.** Known gaps, trade-offs and a real troubleshooting log are written down, not hidden.
 
 > **Live demo:** not public, on purpose. The server's firewall accepts traffic only from my own IP address. I am happy to demo it on a call.
@@ -86,7 +86,7 @@ Known gaps and fixes: [docs/security.md](docs/security.md)
 
 ## Cost control
 
-- No NAT Gateway, no load balancer, small single instances.
+- No NAT Gateway, no always-on load balancer, small single instances. An ALB was tested as a short lab and removed ([docs/load-balancer.md](docs/load-balancer.md)).
 - Short log retention and a documented teardown order.
 - Estimated running cost: about **$0.035/hour** for EC2 and RDS together.
 
@@ -109,7 +109,7 @@ An honest list of what this project does **not** do yet, and what I would do nex
 | Limitation | Next step |
 |---|---|
 | HTTP only (no TLS) | CloudFront with a free certificate, or ALB + ACM + a domain |
-| Single EC2 instance | Application Load Balancer + Auto Scaling group |
+| Single EC2 instance in the standing setup | Tested two servers behind an ALB as a lab ([notes](docs/load-balancer.md)); next is an Auto Scaling group |
 | Single database instance | Multi-AZ RDS and a backup review |
 | Infrastructure created by hand in the console | Rebuild as Terraform |
 | Manual deploys (`deploy.sh`) | GitHub Actions pipeline |
@@ -128,6 +128,7 @@ An honest list of what this project does **not** do yet, and what I would do nex
 | [docs/deployment.md](docs/deployment.md) | How to rebuild the environment step by step |
 | [docs/api.md](docs/api.md) | Endpoints, examples, error format |
 | [docs/troubleshooting.md](docs/troubleshooting.md) | Real problems, causes, fixes and lessons |
+| [docs/load-balancer.md](docs/load-balancer.md) | Lab: two servers behind an ALB, what I tested and what broke |
 | [docs/cloudfront-design.md](docs/cloudfront-design.md) | The planned CloudFront design |
 
 ## Screenshots

@@ -17,7 +17,7 @@ Figures are estimates from the AWS pricing pages at build time. Prices change, s
 
 ## Decisions that kept the bill low
 
-- **No NAT Gateway** (hourly charge) and **no load balancer**. See [architecture.md](architecture.md).
+- **No NAT Gateway** (hourly charge) and **no always-on load balancer** (an ALB was tested for a couple of hours in a lab, see [load-balancer.md](load-balancer.md)). See [architecture.md](architecture.md).
 - **Log retention is 7 days**, so log storage cannot grow without limit.
 - **Parameter Store instead of Secrets Manager** for two secrets.
 - **Stop-able design:** the container restarts automatically, so stopping and starting EC2 is safe. A stopped RDS instance still bills for storage and AWS restarts it after 7 days, so for long breaks it is deleted instead.

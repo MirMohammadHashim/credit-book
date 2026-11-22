@@ -18,6 +18,22 @@ Browser -> ALB (public subnets, 2 AZs) -> target group -> EC2 #1 (ap-southeast-2
 | Load balancer | `credit-book-alb`, internet-facing, both public subnets, HTTP 80 listener forwarding to the target group |
 | Firewall | `alb-sg` allowed HTTP from my IP only. `backend-sg` got a rule allowing HTTP from `alb-sg` (security group to security group) |
 
+## Screenshots
+
+**Target group: both servers healthy**
+
+![Target group overview](screenshots/09-target-group-overview.png)
+
+**Targets tab: one server in each Availability Zone, both Healthy**
+
+![Targets healthy](screenshots/10-targets-both-healthy.png)
+
+**`backend-sg` allowing HTTP from the ALB's security group (the "ALB sg" rule) next to my own IP rule**
+
+![backend-sg rule for the ALB](screenshots/11-backend-sg-allows-alb.png)
+
+The account ID and my IP address are blurred.
+
 ## Why it worked without code changes
 
 - Login uses JWT, so any server can verify a token. No sticky sessions were needed.
